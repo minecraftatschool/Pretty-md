@@ -152,7 +152,9 @@ func _ready() -> void:
 	_layout()
 	if portal:
 		_start_mode(last_mode)   # on the portal the player lands straight in a game; the menu is one tap away
-	if OS.get_environment("BP_TEST") != "":
+	if OS.get_environment("BP_REC") != "":
+		_record()
+	elif OS.get_environment("BP_TEST") != "":
 		_selftest()
 
 
@@ -1645,3 +1647,111 @@ func _selftest() -> void:
 	yield(get_tree().create_timer(2.0), "timeout")
 	yield(_shot("over.png"), "completed")
 	get_tree().quit()
+
+
+# ---------- preview recorder (BP_REC=dir, run with --fixed-fps 60) ----------
+# A bot plays Classic with smooth drags while every second frame is written out as a PNG.
+var rec_on := false
+var rec_frames := 0
+
+
+func _record() -> void:
+	tut = 2
+	sound_on = false
+	music_on = false
+	_music_sync()
+	bests = [640, 0, 0, 0]
+	classic_save = null
+	mode = 0
+	state = "play"
+	_new_game()
+	var seed_rows := {5: [0, 0, 3, 3, 0, 0, 0, 6], 6: [2, 2, 3, 0, 0, 5, 5, 6], 7: [2, 1, 1, 1, 0, 0, 5, 6]}
+	for r in seed_rows:
+		for c in range(N):
+			grid[r * N + c] = seed_rows[r][c]
+	_refill()
+	intro_t = 0.0
+	rec_on = true
+	_rec_loop()
+	_rec_bot()
+	yield(get_tree().create_timer(float(OS.get_environment("BP_REC_SECS")) if OS.get_environment("BP_REC_SECS") != "" else 18.0), "timeout")
+	rec_on = false
+	yield(get_tree(), "idle_frame")
+	print("recorded frames=", rec_frames, " score=", score, " over=", over)
+	get_tree().quit()
+
+
+func _rec_loop() -> void:
+	var dir := OS.get_environment("BP_REC")
+	var n := 0
+	while rec_on:
+		yield(VisualServer, "frame_post_draw")
+		n += 1
+		if n % 2 == 0:
+			var img := get_viewport().get_texture().get_data()
+			img.flip_y()
+			img.save_png("%s/f%05d.png" % [dir, rec_frames])
+			rec_frames += 1
+
+
+func _rec_pick() -> Array:
+	var best := []
+	var best_s := -1e9
+	for slot in range(3):
+		if tray[slot] < 0:
+			continue
+		var p: Dictionary = pieces[tray[slot]]
+		for r in range(N - p.h + 1):
+			for c in range(N - p.w + 1):
+				if not _fits_g(grid, p, c, r):
+					continue
+				var mine := _mine(p, c, r)
+				var f := _lines_if(grid, mine, c, r, p.w, p.h)
+				var sc: float = (f[0].size() + f[1].size()) * 1000.0 + randf() * 3.0
+				for i in mine:
+					var cc: int = i % N
+					var rr: int = int(i / N)
+					sc += rr * 3.0
+					for d in [[1, 0], [-1, 0], [0, 1], [0, -1]]:
+						var x: int = cc + d[0]
+						var y: int = rr + d[1]
+						if x < 0 or y < 0 or x >= N or y >= N:
+							sc += 3.0
+						elif grid[y * N + x] != 0 or mine.has(y * N + x):
+							sc += 4.0
+				if sc > best_s:
+					best_s = sc
+					best = [slot, c, r]
+	return best
+
+
+func _rec_bot() -> void:
+	var clears := 0
+	var moves := 0
+	yield(get_tree().create_timer(0.7), "timeout")
+	while rec_on and not over:
+		var pick := _rec_pick()
+		if pick.empty():
+			break
+		var slot: int = pick[0]
+		while tray_t[slot] < 0.3:
+			yield(get_tree(), "idle_frame")
+		var p: Dictionary = pieces[tray[slot]]
+		var sr := _slot_rect(slot)
+		var a := sr.position + sr.size / 2.0
+		var b := origin + Vector2(pick[1] + p.w / 2.0, pick[2] + p.h / 2.0) * cell
+		drag_touch = false
+		_press(99, a)
+		for i in range(1, 25):
+			var k := i / 24.0
+			k = k * k * (3.0 - 2.0 * k)
+			_move(a.linear_interpolate(b, k))
+			yield(get_tree(), "idle_frame")
+		yield(get_tree().create_timer(0.1), "timeout")
+		var before := combo
+		_release(99, b)
+		moves += 1
+		if combo > before:
+			clears += 1
+		yield(get_tree().create_timer(0.38), "timeout")
+	print("bot moves=", moves, " clearing moves=", clears)
