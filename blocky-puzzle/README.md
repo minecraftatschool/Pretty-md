@@ -18,6 +18,7 @@ Wear OS style small/round screens, and the web.
 | `game/tools/gen_audio.py` | Regenerates the audio (needs Python 3 with NumPy; `ffmpeg` for the OGG). |
 | `web/crazygames/index.html` | HTML shell for the CrazyGames build (SDK v3 events, no ads). |
 | `web/playhop/index.html` | HTML shell for the Playhop build (v1.9-playhop): Yandex Games SDK, player-data saves, pause and mute handling. |
+| `scratch/` | The Scratch 3 edition (v1.9-scratch): the `.sb3` project and `gen_sb3.py`, the script that builds it. |
 | `web/artifact/blocky-puzzle.html` | HTML shell used for the claude.ai artifact (engine split into two files). |
 
 ## Building
@@ -36,6 +37,18 @@ godot --path game --export HTML5 build/index.html
   and zip the files with `index.html` at the root. The shell hides the author credit and shows one ad between games.
 - **CrazyGames:** export HTML5, then replace the exported `index.html` with `web/crazygames/index.html`
   and update the two numbers in its `fileSizes` to the byte sizes of your `index.pck` and `index.wasm`.
+
+## Scratch edition
+
+`scratch/BlockyPuzzle-v1.9-scratch.sb3` opens in Scratch 3 or TurboWarp. It is generated, not hand-built:
+
+```sh
+ffmpeg -i game/audio/music.ogg -ac 1 -ar 22050 -c:a pcm_s16le music.wav
+python3 scratch/gen_sb3.py game/audio music.wav BlockyPuzzle-v1.9-scratch.sb3
+```
+
+One hidden sprite draws everything with pen stamps. It has the four modes, scoring, combos and sounds;
+it does not have saved scores, the guaranteed-solvable dealing or the phone and watch layouts.
 
 ## Self-test
 
