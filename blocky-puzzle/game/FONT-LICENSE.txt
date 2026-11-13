@@ -1,0 +1,1 @@
+font.ttf is "Lilita One" by Juan Montoreano, licensed under the SIL Open Font License 1.1 (https://openfontlicense.org).

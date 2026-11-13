@@ -1,0 +1,5 @@
+.import/
+*.apk
+*.idsig
+log.txt
+shots/

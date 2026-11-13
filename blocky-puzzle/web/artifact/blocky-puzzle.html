@@ -1,0 +1,63 @@
+<title>Blocky Puzzle</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* One screen: the game canvas fills the frame; the page only supplies the loading state. */
+:root { --bg: #1f4b43; --stripe: #235249; --cream: #f3ead5; --ink: #1c1a17; --gold: #f2b632; color-scheme: dark; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--cream); overflow: hidden; touch-action: none;
+  font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+  padding-left: max(0px, env(safe-area-inset-left, 0px)); padding-right: max(0px, env(safe-area-inset-right, 0px)); box-sizing: border-box;
+  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+#canvas { display: block; width: 100%; height: 100%; outline: none; background: var(--bg); }
+#status { position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; background: var(--bg); padding: 0 max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px)); text-align: center; }
+#status h1 { font-size: 44px; font-weight: 900; letter-spacing: .02em; margin: 0; color: var(--cream); text-shadow: 0 4px 0 var(--ink); }
+#status h1 span { color: var(--gold); }
+#bar { width: min(280px, 70vw); height: 18px; border: 4px solid var(--ink); border-radius: 12px; background: var(--ink); overflow: hidden; }
+#fill { width: 2%; height: 100%; background: var(--gold); border-radius: 8px; transition: width .15s; }
+#note { font-size: 15px; font-weight: 700; max-width: 34ch; line-height: 1.4; min-height: 1.4em; }
+</style>
+
+<canvas id="canvas" tabindex="0">This game needs a browser with WebGL.</canvas>
+<div id="status">
+  <h1>BLOCKY <span>PUZZLE</span></h1>
+  <div id="bar"><div id="fill"></div></div>
+  <div id="note">Loading the game…</div>
+</div>
+
+<script>
+// The engine binary is published in two parts (per-file size limit); hand them to the loader as one file.
+(function () {
+  var realFetch = window.fetch.bind(window);
+  window.fetch = function (input, init) {
+    var url = typeof input === "string" ? input : (input && input.url) || "";
+    if (/index\.wasm(\?.*)?$/.test(url)) {
+      return Promise.all([realFetch("engine0.wasm"), realFetch("engine1.wasm")]).then(function (rs) {
+        for (var i = 0; i < rs.length; i++) if (!rs[i].ok) throw new Error("Engine part " + i + " failed to load (" + rs[i].status + ")");
+        return Promise.all(rs.map(function (r) { return r.arrayBuffer(); }));
+      }).then(function (bufs) {
+        return new Response(new Blob(bufs, { type: "application/wasm" }), { status: 200, headers: { "Content-Type": "application/wasm" } });
+      });
+    }
+    if (/index\.pck(\?.*)?$/.test(url)) return realFetch("pack.wasm");   // game data, published under a served file type
+    return realFetch(input, init);
+  };
+})();
+</script>
+<script src="index.js"></script>
+<script>
+(function () {
+  var note = document.getElementById("note"), fill = document.getElementById("fill"), status = document.getElementById("status");
+  function fail(msg) { note.textContent = msg; fill.style.background = "#e8503a"; }
+  var CONFIG = {"args":[],"canvasResizePolicy":2,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":624848,"index.wasm":19761972},"focusCanvas":true,"gdnativeLibs":[]};
+  if (typeof Engine === "undefined") { fail("The game engine script did not load."); return; }
+  var gl = document.createElement("canvas").getContext("webgl") || document.createElement("canvas").getContext("experimental-webgl");
+  if (!gl) { fail("This browser has WebGL turned off, so the game cannot draw."); return; }
+  var engine = new Engine(CONFIG);
+  engine.startGame({
+    onProgress: function (cur, total) { if (total > 0) fill.style.width = Math.max(2, Math.round(cur / total * 100)) + "%"; }
+  }).then(function () { status.hidden = true; }, function (err) {
+    fail("The game could not start: " + (err && err.message ? err.message : err));
+  });
+})();
+</script>
