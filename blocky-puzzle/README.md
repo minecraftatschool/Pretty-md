@@ -17,6 +17,7 @@ Wear OS style small/round screens, and the web.
 | `game/audio/` | Rendered music (`music.ogg`) and sound effects (`*.wav`). |
 | `game/tools/gen_audio.py` | Regenerates the audio (needs Python 3 with NumPy; `ffmpeg` for the OGG). |
 | `web/crazygames/index.html` | HTML shell for the CrazyGames build (SDK v3 events, no ads). |
+| `web/playhop/index.html` | HTML shell for the Playhop build (v1.9-playhop): Yandex Games SDK, player-data saves, pause and mute handling. |
 | `web/artifact/blocky-puzzle.html` | HTML shell used for the claude.ai artifact (engine split into two files). |
 
 ## Building
@@ -31,6 +32,8 @@ godot --path game --export HTML5 build/index.html
 - **Android:** set your own keystore in the Android preset (`keystore/release*` are left blank here),
   and point the editor settings at an Android SDK. The preset targets `armeabi-v7a` and `arm64-v8a`, min SDK 19.
 - **Web:** the HTML5 export produces `index.js`, `index.wasm`, `index.pck` and `index.audio.worklet.js`.
+- **Playhop:** export HTML5, replace the exported `index.html` with `web/playhop/index.html`, update its `fileSizes`,
+  and zip the files with `index.html` at the root. The shell hides the author credit and shows one ad between games.
 - **CrazyGames:** export HTML5, then replace the exported `index.html` with `web/crazygames/index.html`
   and update the two numbers in its `fileSizes` to the byte sizes of your `index.pck` and `index.wasm`.
 

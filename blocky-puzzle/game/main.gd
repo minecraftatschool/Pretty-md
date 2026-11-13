@@ -35,7 +35,9 @@ var last_mode := 0
 var web := false
 var wide := false      # landscape browser window: board in the middle, score left, tray right
 var has_js := false
-var portal := false    # running inside the CrazyGames page shell
+var portal := false    # running inside a portal page shell (CrazyGames, Playhop)
+var portal_name := ""
+var js_paused := false
 var drag_touch := true
 var last_touch := -10.0
 var mute_poll := 0.0
@@ -114,6 +116,7 @@ func _ready() -> void:
 	has_js = OS.has_feature("JavaScript")
 	if has_js:
 		portal = bool(JavaScript.eval("typeof window.cgEvent === 'function'", true))
+		portal_name = str(JavaScript.eval("window.cgPortal || ''", true))
 	font_data = load("res://font.ttf")
 	for b in BASES:
 		var seen := {}
@@ -854,6 +857,7 @@ func _click(id: String) -> void:
 			armed = "reset"
 			armed_t = 3.0
 	elif id == "again":
+		_portal("adBreak")   # a natural pause; only the Playhop shell acts on it
 		_new_game()
 	elif id == "menu":
 		_go_menu()
@@ -920,6 +924,15 @@ func _release(idx: int, pos: Vector2) -> void:
 
 func _process(dt: float) -> void:
 	dt = min(dt, 0.05)
+	if has_js:
+		# the page tells the game when to go quiet (portal mute, tab hidden, an ad on screen) and when to hold still
+		mute_poll -= dt
+		if mute_poll <= 0.0:
+			mute_poll = 0.2
+			AudioServer.set_bus_mute(0, bool(JavaScript.eval("window.cgMuted ? true : false", true)))
+			js_paused = bool(JavaScript.eval("window.cgPaused ? true : false", true))
+		if js_paused:
+			return
 	t_now += dt
 	intro_t += dt
 	menu_t += dt
@@ -938,11 +951,6 @@ func _process(dt: float) -> void:
 	if armed_t <= 0.0:
 		armed = ""
 	score_pulse = max(0.0, score_pulse - dt * 3.0)
-	if has_js:
-		mute_poll -= dt
-		if mute_poll <= 0.0:
-			mute_poll = 0.5
-			AudioServer.set_bus_mute(0, bool(JavaScript.eval("window.cgMuted ? true : false", true)))
 	bump = max(0.0, bump - dt * 7.0)
 	var kb := []
 	for b in beams:
@@ -1159,7 +1167,7 @@ func _draw_main() -> void:
 		_text(names[id], Vector2(), 38, INK)
 		k += 1
 	_reset_xf()
-	_text("v1.12", Vector2(cx, vs.y - 34.0), 20, Color(CREAM.r, CREAM.g, CREAM.b, 0.45))
+	_text("v1.9-playhop" if portal_name == "playhop" else "v1.12", Vector2(cx, vs.y - 34.0), 20, Color(CREAM.r, CREAM.g, CREAM.b, 0.45))
 
 
 func _draw_sub_head(title: String) -> void:
@@ -1251,11 +1259,13 @@ func _draw_settings() -> void:
 	_text("SURE?" if armed == "reset" else ("RESET SCORES" if compact else "RESET"), Vector2(), int(s2.y * 0.4), INK)
 	_reset_xf()
 	if compact:
-		_text("Made by sehrn.xyz", Vector2(vs.x / 2.0, head_y + dia * 0.81), int(dia * 0.032), GOLD)
+		if portal_name != "playhop":   # Playhop allows no references to outside sites
+			_text("Made by sehrn.xyz", Vector2(vs.x / 2.0, head_y + dia * 0.81), int(dia * 0.032), GOLD)
 	else:
 		var r3: Rect2 = rects["mode3"]
 		draw_set_transform(Vector2(vs.x / 2.0, r3.position.y + r3.size.y + 58.0), -0.015, Vector2.ONE * _back((menu_t - 0.35) / 0.35))
-		_text("Made by sehrn.xyz", Vector2(), 46 if wide else 40, GOLD, 6)
+		if portal_name != "playhop":
+			_text("Made by sehrn.xyz", Vector2(), 46 if wide else 40, GOLD, 6)
 		_reset_xf()
 		_text("Built with Godot Engine  -  Typeface: Lilita One (OFL)", Vector2(vs.x / 2.0, r3.position.y + r3.size.y + 112.0), 30 if wide else 20, Color(CREAM.r, CREAM.g, CREAM.b, 0.55))
 
