@@ -35,6 +35,7 @@ var last_mode := 0
 var web := false
 var wide := false      # landscape browser window: board in the middle, score left, tray right
 var has_js := false
+var portal := false    # running inside the CrazyGames page shell
 var drag_touch := true
 var last_touch := -10.0
 var mute_poll := 0.0
@@ -111,6 +112,8 @@ func _ready() -> void:
 	randomize()
 	web = OS.get_name() == "HTML5" or OS.get_environment("BP_WEB") != ""
 	has_js = OS.has_feature("JavaScript")
+	if has_js:
+		portal = bool(JavaScript.eval("typeof window.cgEvent === 'function'", true))
 	font_data = load("res://font.ttf")
 	for b in BASES:
 		var seen := {}
@@ -147,6 +150,8 @@ func _ready() -> void:
 	_music_sync()
 	get_viewport().connect("size_changed", self, "_layout")
 	_layout()
+	if portal:
+		_start_mode(last_mode)   # on the portal the player lands straight in a game; the menu is one tap away
 	if OS.get_environment("BP_TEST") != "":
 		_selftest()
 
@@ -694,18 +699,30 @@ func _restore(d: Dictionary) -> bool:
 func _save() -> void:
 	if mode == 0 and state == "play":
 		classic_save = null if over else _snapshot()
+	var text := to_json({"bests": bests, "sound": sound_on, "music": music_on, "vib": vib_on, "tut": tut, "classic": classic_save, "last": last_mode})
 	var f := File.new()
 	if f.open(SAVE, File.WRITE) == OK:
-		f.store_string(to_json({"bests": bests, "sound": sound_on, "music": music_on, "vib": vib_on, "tut": tut, "classic": classic_save, "last": last_mode}))
+		f.store_string(text)
 		f.close()
+	if portal:
+		# CrazyGames Data module: follows the player's account across devices
+		JavaScript.eval("window.cgSave && window.cgSave(%s)" % to_json(text), true)
 
 
 func _load() -> void:
-	var f := File.new()
-	if not f.file_exists(SAVE) or f.open(SAVE, File.READ) != OK:
-		return
-	var d = parse_json(f.get_as_text())
-	f.close()
+	var text := ""
+	if portal:
+		var cloud = JavaScript.eval("window.cgLoad ? (window.cgLoad() || '') : ''", true)
+		if typeof(cloud) == TYPE_STRING:
+			text = cloud
+	if text == "":
+		# local file: every other platform, and the one-time carry-over for portal players
+		var f := File.new()
+		if not f.file_exists(SAVE) or f.open(SAVE, File.READ) != OK:
+			return
+		text = f.get_as_text()
+		f.close()
+	var d = parse_json(text)
 	if typeof(d) != TYPE_DICTIONARY:
 		return
 	sound_on = bool(d.get("sound", true))
@@ -777,7 +794,7 @@ func _input(ev: InputEvent) -> void:
 			_release(99, ev.position)
 	elif ev is InputEventMouseMotion and drag_idx == 99 and drag_slot >= 0:
 		_move(ev.position)
-	elif ev is InputEventKey and ev.pressed and not ev.echo and ev.scancode == KEY_ESCAPE:
+	elif ev is InputEventKey and ev.pressed and not ev.echo and ev.scancode == KEY_ESCAPE and not web:   # browsers use Esc to leave fullscreen
 		_nav_back()
 
 
@@ -1140,7 +1157,7 @@ func _draw_main() -> void:
 		_text(names[id], Vector2(), 38, INK)
 		k += 1
 	_reset_xf()
-	_text("v1.11", Vector2(cx, vs.y - 34.0), 20, Color(CREAM.r, CREAM.g, CREAM.b, 0.45))
+	_text("v1.12", Vector2(cx, vs.y - 34.0), 20, Color(CREAM.r, CREAM.g, CREAM.b, 0.45))
 
 
 func _draw_sub_head(title: String) -> void:

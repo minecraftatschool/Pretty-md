@@ -36,20 +36,31 @@ body { background: #1f4b43; color: #f3ead5; overflow: hidden; touch-action: none
   var sdk = null;                      // set once the CrazyGames SDK has initialised
   window.cgMuted = false;              // the game polls this and mutes its audio
   // The game calls this with: gameplayStart, gameplayStop, happytime. No ad calls are made anywhere.
+  var loadingDone = false;
   window.cgEvent = function (name) {
+    if (name === "loadingStop") { if (loadingDone) return; loadingDone = true; }
+    if (name === "gameplayStart" && !loadingDone) window.cgEvent("loadingStop");   // loading always ends before play begins
     try { if (sdk && sdk.game && typeof sdk.game[name] === "function") sdk.game[name](); } catch (e) {}
   };
+  // Progress save through the CrazyGames Data module (enable "Progress Save" when submitting).
+  window.cgSave = function (text) { try { if (sdk && sdk.data) sdk.data.setItem("save", text); } catch (e) {} };
+  window.cgLoad = function () { try { return sdk && sdk.data ? sdk.data.getItem("save") : null; } catch (e) { return null; } };
+  // Keep the page still under the game: no wheel or key scrolling, no context menu.
+  window.addEventListener("wheel", function (e) { e.preventDefault(); }, { passive: false });
+  window.addEventListener("keydown", function (e) { if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].indexOf(e.key) >= 0) e.preventDefault(); });
+  document.addEventListener("contextmenu", function (e) { e.preventDefault(); });
   function applySettings(s) { window.cgMuted = !!(s && s.muteAudio); }
   function initSdk() {
     if (!window.CrazyGames || !window.CrazyGames.SDK) return Promise.resolve();
     return Promise.resolve().then(function () { return window.CrazyGames.SDK.init(); }).then(function () {
+      if (window.CrazyGames.SDK.environment === "disabled") return;   // not on CrazyGames: every SDK call would throw
       sdk = window.CrazyGames.SDK;
       try { applySettings(sdk.game.settings); sdk.game.addSettingsChangeListener(applySettings); } catch (e) {}
       window.cgEvent("loadingStart");
     }).catch(function () { sdk = null; });   // outside CrazyGames the game simply runs without the SDK
   }
   function fail(msg) { note.textContent = msg; fill.style.background = "#e8503a"; }
-  var CONFIG = {"args":[],"canvasResizePolicy":2,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":628976,"index.wasm":19761972},"focusCanvas":true,"gdnativeLibs":[]};
+  var CONFIG = {"args":[],"canvasResizePolicy":2,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":629568,"index.wasm":19761972},"focusCanvas":true,"gdnativeLibs":[]};
   if (typeof Engine === "undefined") { fail("The game engine script did not load."); return; }
   var probe = document.createElement("canvas");
   if (!(probe.getContext("webgl") || probe.getContext("experimental-webgl"))) { fail("WebGL is turned off in this browser, so the game cannot draw."); return; }
