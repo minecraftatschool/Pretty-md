@@ -55,6 +55,7 @@ var new_best := false
 var sound_on := true
 var music_on := true
 var vib_on := true
+var tut := 0   # first-run coaching: 0 = show how to drag, 1 = show what a line is, 2 = done
 var time_left := 120.0
 var moves_left := 30
 var rubble_in := 4
@@ -577,6 +578,10 @@ func _place(slot: int, c0: int, r0: int) -> void:
 		if combo > 1:
 			msg += "COMBO x%d" % combo
 		toast = msg.strip_edges()
+		if tut < 2:
+			tut = 2
+			if toast == "":
+				toast = "YOU GOT IT!"
 		toast_t = 1.2 if toast != "" else 0.0
 		shake_mag = 5.0 + 5.0 * lines
 		if mode == 1:
@@ -594,6 +599,8 @@ func _place(slot: int, c0: int, r0: int) -> void:
 		dry += 1
 		if dry >= 3:
 			combo = 0
+		if tut == 0:
+			tut = 1
 		_sfx("place", 0.95 + randf() * 0.15)
 		_buzz(12)
 	bump = 1.0
@@ -689,7 +696,7 @@ func _save() -> void:
 		classic_save = null if over else _snapshot()
 	var f := File.new()
 	if f.open(SAVE, File.WRITE) == OK:
-		f.store_string(to_json({"bests": bests, "sound": sound_on, "music": music_on, "vib": vib_on, "classic": classic_save, "last": last_mode}))
+		f.store_string(to_json({"bests": bests, "sound": sound_on, "music": music_on, "vib": vib_on, "tut": tut, "classic": classic_save, "last": last_mode}))
 		f.close()
 
 
@@ -709,6 +716,11 @@ func _load() -> void:
 	if typeof(b) == TYPE_ARRAY:
 		for i in range(min(4, b.size())):
 			bests[i] = int(b[i])
+	var played := false
+	for v in bests:
+		if v > 0:
+			played = true
+	tut = int(clamp(int(d.get("tut", 2 if played else 0)), 0, 2))   # players from before the tutorial skip it
 	if typeof(d.get("classic")) == TYPE_DICTIONARY:
 		classic_save = d["classic"]
 
@@ -816,6 +828,7 @@ func _click(id: String) -> void:
 		if armed == "reset":
 			bests = [0, 0, 0, 0]
 			classic_save = null
+			tut = 0
 			armed = ""
 			_save()
 		else:
@@ -1127,7 +1140,7 @@ func _draw_main() -> void:
 		_text(names[id], Vector2(), 38, INK)
 		k += 1
 	_reset_xf()
-	_text("v1.10", Vector2(cx, vs.y - 34.0), 20, Color(CREAM.r, CREAM.g, CREAM.b, 0.45))
+	_text("v1.11", Vector2(cx, vs.y - 34.0), 20, Color(CREAM.r, CREAM.g, CREAM.b, 0.45))
 
 
 func _draw_sub_head(title: String) -> void:
@@ -1226,6 +1239,83 @@ func _draw_settings() -> void:
 		_text("Made by sehrn.xyz", Vector2(), 46 if wide else 40, GOLD, 6)
 		_reset_xf()
 		_text("Built with Godot Engine  -  Typeface: Lilita One (OFL)", Vector2(vs.x / 2.0, r3.position.y + r3.size.y + 112.0), 30 if wide else 20, Color(CREAM.r, CREAM.g, CREAM.b, 0.55))
+
+
+# First-run coaching, shown instead of written instructions: a hand drags a real piece to a real
+# spot, then the row or column nearest to full gets a pulsing outline.
+func _draw_coach(o: Vector2, bw: float) -> void:
+	var fsz := int(max(18.0, cell * 0.42))
+	var pulse := 0.5 + 0.5 * sin(t_now * 5.0)
+	if tut == 0:
+		var slot := -1
+		for i in range(3):
+			if tray[i] >= 0 and tray_t[i] > 0.35 and _fits_anywhere(pieces[tray[i]]):
+				slot = i
+				break
+		if slot < 0:
+			return
+		var p: Dictionary = pieces[tray[slot]]
+		var best_d := 1e9
+		var tc := -1
+		var tr := -1
+		for r in range(N - p.h + 1):
+			for c in range(N - p.w + 1):
+				if _fits_g(grid, p, c, r):
+					var d := Vector2(c + p.w / 2.0 - 4.0, r + p.h / 2.0 - 4.5).length()
+					if d < best_d:
+						best_d = d
+						tc = c
+						tr = r
+		if tc < 0:
+			return
+		for c in p.cells:
+			_blockc(o + Vector2(tc + c.x, tr + c.y) * cell, cell, COLORS[p.color], 0.22 + 0.16 * pulse, 0.94)
+		var sr := _slot_rect(slot)
+		var from := sr.position + sr.size / 2.0
+		var to := o + Vector2(tc + p.w / 2.0, tr + p.h / 2.0) * cell
+		var ph := fmod(t_now, 2.0) / 2.0
+		var k: float = clamp((ph - 0.15) / 0.5, 0.0, 1.0)
+		k = k * k * (3.0 - 2.0 * k)
+		var a: float = clamp(ph / 0.1, 0.0, 1.0) * clamp((1.0 - ph) / 0.15, 0.0, 1.0)
+		var at := from.linear_interpolate(to, k)
+		var sz: float = cell * lerp(mini, 1.0, k)
+		_piece(at, p, sz, 0.85 * a)
+		# the hand
+		var h := at + Vector2(sz * 0.2, p.h * sz / 2.0 + cell * 0.25)
+		var hr := cell * 0.24
+		draw_set_transform(h, -0.35, Vector2.ONE)
+		_box(Rect2(-hr * 0.42, -hr * 2.2, hr * 0.84, hr * 2.4), Color(CREAM.r, CREAM.g, CREAM.b, a), hr * 0.42, 4.0, Color(INK.r, INK.g, INK.b, a))
+		_box(Rect2(-hr, -hr * 0.6, hr * 2.0, hr * 2.0), Color(CREAM.r, CREAM.g, CREAM.b, a), hr * 0.7, 4.0, Color(INK.r, INK.g, INK.b, a))
+		_reset_xf()
+		_text("DRAG A PIECE ONTO THE BOARD", Vector2(vs.x / 2.0, o.y + bw - cell * 0.55), fsz, Color(CREAM.r, CREAM.g, CREAM.b, 0.75 + 0.25 * pulse), int(fsz * 0.2))
+	else:
+		var best_n := -1
+		var is_row := true
+		var idx := 0
+		for i in range(N):
+			var nr := 0
+			var nc := 0
+			for j in range(N):
+				if grid[i * N + j] != 0:
+					nr += 1
+				if grid[j * N + i] != 0:
+					nc += 1
+			if nr > best_n:
+				best_n = nr
+				is_row = true
+				idx = i
+			if nc > best_n:
+				best_n = nc
+				is_row = false
+				idx = i
+		var rect := Rect2(o.x, o.y + idx * cell, bw, cell) if is_row else Rect2(o.x + idx * cell, o.y, cell, bw)
+		sb.bg_color = Color(GOLD.r, GOLD.g, GOLD.b, 0.10 + 0.12 * pulse)
+		sb.border_color = Color(GOLD.r, GOLD.g, GOLD.b, 0.6 + 0.4 * pulse)
+		sb.set_border_width_all(int(max(4.0, cell * 0.08)))
+		sb.set_corner_radius_all(int(cell * 0.2))
+		draw_style_box(sb, rect.grow(2.0))
+		var ty: float = o.y + bw - cell * 0.55 if (not is_row or idx < 6) else o.y + cell * 0.55
+		_text("FILL A LINE TO CLEAR IT", Vector2(vs.x / 2.0, ty), fsz, Color(CREAM.r, CREAM.g, CREAM.b, 0.75 + 0.25 * pulse), int(fsz * 0.2))
 
 
 func _info() -> String:
@@ -1404,6 +1494,8 @@ func _draw_board() -> void:
 			var g2 := cell * drag_scale
 			_rr(Rect2(tl + c * g2 + Vector2(g2 * 0.04, g2 * 0.16), Vector2(g2 * 0.92, g2 * 0.92)), Color(INK.r, INK.g, INK.b, 0.35), g2 * 0.17)
 		_piece(drag_center, p, cell * drag_scale, 1.0)
+	if tut < 2 and not over and drag_slot < 0 and intro_t > 0.7:
+		_draw_coach(o, bw)
 	for q in popups:
 		var k: float = q.t / 0.9
 		var a: float = clamp((1.0 - k) * 2.5, 0.0, 1.0)
@@ -1482,7 +1574,9 @@ func _selftest() -> void:
 	yield(get_tree(), "idle_frame")
 	_tap(mr.position + mr.size / 2.0, false)
 	yield(get_tree().create_timer(1.0), "timeout")
-	print("state=", state, " mode=", mode)
+	print("state=", state, " mode=", mode, " tut=", tut)
+	yield(get_tree().create_timer(1.35), "timeout")
+	yield(_shot("coach0.png"), "completed")
 	var moves := 0
 	var lastcombo := 0
 	var shotc := false
@@ -1515,6 +1609,9 @@ func _selftest() -> void:
 		yield(get_tree(), "idle_frame")
 		if moves == 5:
 			yield(_shot("play.png"), "completed")
+		if moves == 1 and tut == 1:
+			yield(get_tree().create_timer(0.5), "timeout")
+			yield(_shot("coach1.png"), "completed")
 		_tap(target, false)
 		yield(get_tree(), "idle_frame")
 		yield(get_tree(), "idle_frame")
@@ -1526,6 +1623,7 @@ func _selftest() -> void:
 			yield(_shot("clear.png"), "completed")
 		lastcombo = combo
 		moves += 1
+	print("tut after game=", tut)
 	print("selftest mode=", mode, " moves=", moves, " score=", score, " over=", over, " title=", over_title)
 	yield(get_tree().create_timer(2.0), "timeout")
 	yield(_shot("over.png"), "completed")

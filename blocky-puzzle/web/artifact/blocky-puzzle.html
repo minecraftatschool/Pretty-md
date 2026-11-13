@@ -49,7 +49,7 @@ body { margin: 0; background: var(--bg); color: var(--cream); overflow: hidden; 
 (function () {
   var note = document.getElementById("note"), fill = document.getElementById("fill"), status = document.getElementById("status");
   function fail(msg) { note.textContent = msg; fill.style.background = "#e8503a"; }
-  var CONFIG = {"args":[],"canvasResizePolicy":2,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":624848,"index.wasm":19761972},"focusCanvas":true,"gdnativeLibs":[]};
+  var CONFIG = {"args":[],"canvasResizePolicy":2,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":628976,"index.wasm":19761972},"focusCanvas":true,"gdnativeLibs":[]};
   if (typeof Engine === "undefined") { fail("The game engine script did not load."); return; }
   var gl = document.createElement("canvas").getContext("webgl") || document.createElement("canvas").getContext("experimental-webgl");
   if (!gl) { fail("This browser has WebGL turned off, so the game cannot draw."); return; }
