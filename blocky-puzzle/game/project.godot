@@ -9,7 +9,7 @@ run/main_scene="res://main.tscn"
 config/icon="res://icon.png"
 config/quit_on_go_back=false
 boot_splash/show_image=false
-boot_splash/bg_color=Color( 0.078, 0.102, 0.2, 1 )
+boot_splash/bg_color=Color( 0.42, 0.259, 0.149, 1 )
 
 [display]
 

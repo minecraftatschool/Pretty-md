@@ -14,7 +14,7 @@ body { background: #1f4b43; color: #f3ead5; overflow: hidden; touch-action: none
   -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
 #canvas { display: block; width: 100%; height: 100%; outline: none; background: #1f4b43; }
 #status { position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; background: #1f4b43; text-align: center; padding: 0 16px; }
+  justify-content: center; background: #6b4226; text-align: center; padding: 0 16px; }
 #status[hidden] { display: none; }
 #status h1 { font-size: 44px; font-weight: 900; letter-spacing: .02em; margin: 0 0 18px; text-shadow: 0 4px 0 #1c1a17; }
 #status h1 span { color: #f2b632; }
@@ -26,7 +26,7 @@ body { background: #1f4b43; color: #f3ead5; overflow: hidden; touch-action: none
 <body>
 <canvas id="canvas" tabindex="0">This game needs a browser with WebGL.</canvas>
 <div id="status">
-  <h1>BLOCKY <span>PUZZLE</span></h1>
+  <h1>Seh's Workshop</h1>
   <div id="bar"><div id="fill"></div></div>
   <div id="note">Loading...</div>
 </div>
@@ -112,7 +112,7 @@ body { background: #1f4b43; color: #f3ead5; overflow: hidden; touch-action: none
   }
 
   function fail(msg) { note.textContent = msg; fill.style.background = "#e8503a"; }
-  var CONFIG = {"args":[],"canvasResizePolicy":2,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":633472,"index.wasm":19761972},"focusCanvas":true,"gdnativeLibs":[]};
+  var CONFIG = {"args":[],"canvasResizePolicy":2,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":1673840,"index.wasm":19761972},"focusCanvas":true,"gdnativeLibs":[]};
   if (typeof Engine === "undefined") { fail("The game engine script did not load."); return; }
   var probe = document.createElement("canvas");
   if (!(probe.getContext("webgl") || probe.getContext("experimental-webgl"))) { fail("WebGL is turned off in this browser, so the game cannot draw."); return; }

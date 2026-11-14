@@ -3,14 +3,14 @@
 One hidden sprite ("Game") draws everything with pen stamps and holds all the logic; the Stage only
 plays the music. All text is drawn from the game's own typeface, converted to outlines here.
 
-Run:  python3 gen_sb3.py <audio_dir> <music.wav> <font.ttf> <out.sb3>
+Run:  python3 gen_sb3.py <audio_dir> <music.wav> <music2.wav> <font.ttf> <out.sb3>
 """
 import json, hashlib, zipfile, wave, sys, os
 from fontTools.ttLib import TTFont
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
 
-AUDIO, MUSIC, FONTPATH, OUT = sys.argv[1:5]
+AUDIO, MUSIC, MUSIC2, FONTPATH, OUT = sys.argv[1:6]
 
 # ================================================================ block builder
 _n = [0]
@@ -255,6 +255,9 @@ cells = "".join('<rect x="%d" y="%d" width="30" height="30" rx="5" fill="%s"/>' 
 C("frame", 292, 298, frame, 146, 146)
 C("board", 292, 298, frame + cells, 146, 146)
 C("stripes", 760, 360, "".join('<polygon points="%g,0 %g,0 %g,360 %g,360" fill="%s"/>' % (x, x + 22.5, x + 22.5 - 144, x - 144, GREEN2) for x in [k * 50.625 for k in range(0, 19)]), 380, 180)
+BROWN = "#6b4226"
+C("splash-bg", 480, 360, '<rect width="480" height="360" fill="%s"/>' % BROWN + "".join('<polygon points="%g,0 %g,0 %g,360 %g,360" fill="#754b2d"/>' % (x, x + 14, x + 14 - 144, x - 144) for x in range(0, 640, 34)))
+label("splash-t", "Seh's Workshop", 44, CREAM, INK)
 C("title1", 300, 70, txt("BLOCKY", 150, 35, 45, CREAM, INK))
 C("title2", 300, 70, txt("PUZZLE", 150, 35, 45, GOLD, INK))
 C("deco1", 44, 44, "".join(tile_body(COLORS[6], 13, x, y) for x, y in [(2, 2), (15, 2), (28, 2), (2, 15), (2, 28)]))
@@ -293,7 +296,7 @@ for n_, t_, f_ in [("tg-on", "ON", GOLD), ("tg-off", "OFF", CELLC), ("tg-reset",
 label("madeby", "Made by sehrn.xyz", 16, GOLD, INK)
 label("credits", "Built with Scratch  -  Typeface: Lilita One (OFL)", 9.5, CREAM, opacity=0.6)
 label("h-modes", "GAME MODES", 22, CREAM, INK); label("h-help", "HOW TO PLAY", 22, CREAM, INK); label("h-settings", "SETTINGS", 22, CREAM, INK)
-label("ver", "v1.12-scratch", 8.5, CREAM, opacity=0.5)
+label("ver", "v1.13-scratch", 8.5, CREAM, opacity=0.5)
 label("l-best", "BEST", 14, GOLD); label("l-best-s", "BEST", 11, "#b9c4b3"); label("l-moves", "MOVES LEFT", 11, GOLD); label("l-stones", "STONES IN", 11, GOLD)
 C("bar-bg", 86, 8, '<rect width="86" height="8" rx="4" fill="%s"/>' % INK)
 C("bar-seg", 2, 4, '<rect width="2" height="4" fill="%s"/>' % GOLD)
@@ -367,7 +370,7 @@ SIG.update({
     "spawn": ["x", "y", "vx", "vy", "life", "s", "cos", "g"], "confetti": ["n"], "popup": ["x", "y", "s", "big"],
     "will calc": [], "go": ["screen"], "start mode": ["m"], "act": ["id"], "hit": [], "tick": [], "anim": [],
     "draw head": ["cos"], "draw main": [], "draw modes": [], "draw help": [], "draw settings": [],
-    "draw hud": [], "draw board": [], "draw fx": [], "draw coach": [], "draw over": [], "draw": [],
+    "draw splash": [], "draw hud": [], "draw board": [], "draw fx": [], "draw coach": [], "draw over": [], "draw": [],
 })
 def gidx(c, r): return add(mul(r, 8), c, 1)
 def cellx(c): return add(BX + CS / 2, mul(c, CS))
@@ -752,6 +755,9 @@ define("tick", [
     if_(eq(v("over"), 1), [chg("overT", v("dt"))]),
     setv("mx", mousex()), setv("my", mousey()),
     ifelse(mousedown(), [setv("down", 1)], [setv("down", 0)]),
+    if_(eq(v("state"), "splash"), [                             # the maker's card: goes away by itself, or on a tap
+        chg("splashT", v("dt")),
+        if_(or_(gt(v("splashT"), 1.7), and_(eq(v("down"), 1), eq(v("wasDown"), 0), gt(v("splashT"), 0.4))), [call("go", "main"), setv("wasDown", 1)])]),
     setv("scr", v("state")),
     if_(and_(eq(v("state"), "play"), eq(v("over"), 1)), [ifelse(gt(v("overT"), 1.2), [setv("scr", "over")], [setv("scr", "wait")])]),
     call("hit"),
@@ -1047,9 +1053,21 @@ define("draw over", [
             call("ease", div(sub(v("overT"), 1.1), 0.3)),
             call("button", 16, "b-omenu", "sh-omenu", 0, -103, mul(100, v("eb")))])]),
 ])
+define("draw splash", [
+    stp("splash-bg", 0, 0),
+    call("ease", div(v("splashT"), 0.45)),
+    call("stamp rot", "splash-t", 0, 14, mul(100, v("eb")), 88.3),
+    setv("di", 0),
+    repeat(3, [
+        call("ease", div(sub(v("splashT"), add(0.25, mul(v("di"), 0.08))), 0.3)),
+        setv("n", mul(5, sin(sub(mul(v("tNow"), 286), mul(v("di"), 52))))), if_(lt(v("n"), 0), [setv("n", 0)]),
+        stp(join("t", add(1, mul(v("di"), 2))), add(-27, mul(v("di"), 27)), add(-34, v("n")), mul(68, v("eb"))),
+        chg("di", 1)]),
+])
 define("draw", [
     erase(),
-    stp("stripes", sub(0, mod(mul(v("tNow"), 3.9), 50.625)), 0),
+    if_(eq(v("state"), "splash"), [call("draw splash")]),
+    if_(not_(eq(v("state"), "splash")), [stp("stripes", sub(0, mod(mul(v("tNow"), 3.9), 50.625)), 0)]),
     if_(eq(v("state"), "main"), [call("draw main")]),
     if_(eq(v("state"), "modes"), [call("draw modes")]),
     if_(eq(v("state"), "help"), [call("draw help")]),
@@ -1062,13 +1080,13 @@ define("draw", [
 ])
 flag([hide(), clearfx(), point(90), resettimer(), setv("lastFrame", 0), setv("tNow", 0), setv("wasDown", 1), setv("pressId", 0),
       setv("tut", 0), setv("soundOn", 1), setv("musicOn", 1), setv("lastMode", 1), setv("mode", 1), setv("over", 0),
-      call("go", "main"), forever([call("tick"), call("draw")])])
+      call("go", "main"), setv("state", "splash"), setv("splashT", 0), forever([call("tick"), call("draw")])])
 missing = set(SIG) - DEFINED
 assert not missing, missing
 GAME_BLOCKS = BLOCKS
 
 BLOCKS = {}
-flag([forever([playwait("music")])])
+flag([forever([playwait("music"), playwait("music2")])])      # the two themes take turns
 flag([forever([volume(mul(35, V("musicOn")))])])
 STAGE_BLOCKS = BLOCKS
 
@@ -1079,14 +1097,14 @@ project = {
     "targets": [
         {"isStage": True, "name": "Stage", "variables": {"var_" + k: [k, val] for k, val in GLOBALS.items()}, "lists": {}, "broadcasts": {},
          "blocks": STAGE_BLOCKS, "comments": {}, "currentCostume": 0, "costumes": [costume_entry("felt", BACKDROP, 240, 180)],
-         "sounds": [sound_entry("music", MUSIC)], "volume": 35, "layerOrder": 0, "tempo": 60, "videoTransparency": 50, "videoState": "on", "textToSpeechLanguage": None},
+         "sounds": [sound_entry("music", MUSIC), sound_entry("music2", MUSIC2)], "volume": 35, "layerOrder": 0, "tempo": 60, "videoTransparency": 50, "videoState": "on", "textToSpeechLanguage": None},
         {"isStage": False, "name": "Game", "variables": {"var_" + k: [k, val] for k, val in VARS.items()},
          "lists": {"list_" + k: [k, val] for k, val in LISTS.items()}, "broadcasts": {}, "blocks": GAME_BLOCKS, "comments": {},
          "currentCostume": 0, "costumes": [costume_entry(*c) for c in COSTUMES], "sounds": [sound_entry(n, os.path.join(AUDIO, n + ".wav")) for n in SFX],
          "volume": 100, "layerOrder": 1, "visible": False, "x": 0, "y": 0, "size": 100, "direction": 90, "draggable": False, "rotationStyle": "all around"},
     ],
     "monitors": [], "extensions": ["pen"],
-    "meta": {"semver": "3.0.0", "vm": "0.2.0", "agent": "Blocky Puzzle v1.12-scratch generator"},
+    "meta": {"semver": "3.0.0", "vm": "0.2.0", "agent": "Blocky Puzzle v1.13-scratch generator"},
 }
 with zipfile.ZipFile(OUT, "w", zipfile.ZIP_DEFLATED) as z:
     z.writestr("project.json", json.dumps(project))

@@ -7,7 +7,8 @@ Wear OS style small/round screens, and the web.
 - Modes: Classic, Rush (2 minutes), 30 Moves, Rubble (stones drop in every 4 moves)
 - Hands are always solvable; fuller boards are likelier to get a line-clearing piece
 - Main menu, settings (sound, music, vibration, reset scores), how-to-play
-- Music and sound effects are synthesized by `game/tools/gen_audio.py`
+- Two music themes take turns (`game/tools/gen_audio.py` and `game/tools/gen_music2.py` synthesize all audio)
+- Opens on a short "Seh's Workshop" card
 
 ## Layout
 
@@ -17,8 +18,8 @@ Wear OS style small/round screens, and the web.
 | `game/audio/` | Rendered music (`music.ogg`) and sound effects (`*.wav`). |
 | `game/tools/gen_audio.py` | Regenerates the audio (needs Python 3 with NumPy; `ffmpeg` for the OGG). |
 | `web/crazygames/index.html` | HTML shell for the CrazyGames build (SDK v3 events, no ads). |
-| `web/playhop/index.html` | HTML shell for the Playhop build (v1.12-playhop): Yandex Games SDK, player-data saves, pause and mute handling. |
-| `scratch/` | The Scratch 3 edition (v1.12-scratch): the `.sb3` project and `gen_sb3.py`, the script that builds it. |
+| `web/playhop/index.html` | HTML shell for the Playhop build (v1.13-playhop): Yandex Games SDK, player-data saves, pause and mute handling. |
+| `scratch/` | The Scratch 3 edition (v1.13-scratch): the `.sb3` project and `gen_sb3.py`, the script that builds it. |
 | `web/artifact/blocky-puzzle.html` | HTML shell used for the claude.ai artifact (engine split into two files). |
 
 ## Building
@@ -40,12 +41,13 @@ godot --path game --export HTML5 build/index.html
 
 ## Scratch edition
 
-`scratch/BlockyPuzzle-v1.12-scratch.sb3` opens in Scratch 3 or TurboWarp. It is generated, not hand-built:
+`scratch/BlockyPuzzle-v1.13-scratch.sb3` opens in Scratch 3 or TurboWarp. It is generated, not hand-built:
 
 ```sh
 pip install fonttools
 ffmpeg -i game/audio/music.ogg -ac 1 -ar 22050 -c:a pcm_s16le music.wav
-python3 scratch/gen_sb3.py game/audio music.wav game/font.ttf BlockyPuzzle-v1.12-scratch.sb3
+python3 game/tools/gen_music2.py theme2.wav && ffmpeg -i theme2.wav -ac 1 -ar 22050 -c:a pcm_s16le music2.wav
+python3 scratch/gen_sb3.py game/audio music.wav music2.wav game/font.ttf BlockyPuzzle-v1.13-scratch.sb3
 ```
 
 One hidden sprite draws everything with pen stamps; text is the game's own typeface converted to outlines.

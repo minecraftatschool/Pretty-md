@@ -105,6 +105,10 @@ var sfx := {}
 var players := []
 var next_player := 0
 var music: AudioStreamPlayer
+var songs := []
+var song_i := 0
+var splash_t := 0.0
+const BROWN := Color("6b4226")
 var bump := 0.0
 var beams := []
 var last_tick := 0
@@ -141,9 +145,12 @@ func _ready() -> void:
 		add_child(p)
 		players.append(p)
 	music = AudioStreamPlayer.new()
-	var song = load("res://audio/music.ogg")
-	song.loop = true
-	music.stream = song
+	for path in ["res://audio/music.ogg", "res://audio/music2.ogg"]:      # the two themes take turns
+		var song = load(path)
+		song.loop = false
+		songs.append(song)
+	music.stream = songs[0]
+	music.connect("finished", self, "_next_song")
 	music.volume_db = -13.0
 	add_child(music)
 	for _i in range(N * N):
@@ -153,8 +160,7 @@ func _ready() -> void:
 	_music_sync()
 	get_viewport().connect("size_changed", self, "_layout")
 	_layout()
-	if portal:
-		_start_mode(last_mode)   # on the portal the player lands straight in a game; the menu is one tap away
+	state = "splash"
 	if OS.get_environment("BP_REC") != "":
 		_record()
 	elif OS.get_environment("BP_TEST") != "":
@@ -198,6 +204,13 @@ func _portal_play(on: bool) -> void:
 func _buzz(ms: int) -> void:
 	if vib_on and not web:
 		Input.vibrate_handheld(ms)
+
+
+func _next_song() -> void:
+	song_i = (song_i + 1) % songs.size()
+	music.stream = songs[song_i]
+	if music_on:
+		music.play()
 
 
 func _music_sync() -> void:
@@ -760,6 +773,8 @@ func _slot_rect(i: int) -> Rect2:
 
 
 func _buttons() -> Array:
+	if state == "splash":
+		return []
 	if state == "main":
 		return ["play", "modes", "help", "settings"]
 	if state == "modes":
@@ -803,7 +818,20 @@ func _input(ev: InputEvent) -> void:
 		_nav_back()
 
 
+func _end_splash() -> void:
+	if state != "splash":
+		return
+	if portal:
+		_start_mode(last_mode)   # on the portal the player lands straight in a game; the menu is one tap away
+	else:
+		_goto("main")
+
+
 func _press(idx: int, pos: Vector2) -> void:
+	if state == "splash":
+		if splash_t > 0.4:
+			_end_splash()
+		return
 	var id := _hit(pos)
 	if id != "":
 		press_id = id
@@ -924,6 +952,13 @@ func _release(idx: int, pos: Vector2) -> void:
 
 func _process(dt: float) -> void:
 	dt = min(dt, 0.05)
+	if state == "splash":
+		t_now += dt
+		splash_t += dt
+		if splash_t > (0.9 if web else 1.7):     # on the web the loading page has already shown the same card
+			_end_splash()
+		update()
+		return
 	if has_js:
 		# the page tells the game when to go quiet (portal mute, tab hidden, an ad on screen) and when to hold still
 		mute_poll -= dt
@@ -1090,7 +1125,30 @@ func _button(id: String, fill: Color, radius: float, scale := 1.0, offset := Vec
 	return r.size
 
 
+func _draw_splash() -> void:                               # the maker's card shown when the game opens
+	draw_rect(Rect2(Vector2(), vs), BROWN)
+	var cx := vs.x / 2.0
+	var cy := vs.y / 2.0
+	var unit := min(vs.x, vs.y)
+	var off := fmod(t_now * 10.0, 120.0)
+	var k := -2
+	while k * 120.0 - 200.0 < vs.x + vs.y * 0.4:
+		var x0 := k * 120.0 + off
+		draw_colored_polygon(PoolVector2Array([Vector2(x0, 0), Vector2(x0 + 50.0, 0), Vector2(x0 + 50.0 - vs.y * 0.4, vs.y), Vector2(x0 - vs.y * 0.4, vs.y)]), BROWN.lightened(0.045))
+		k += 1
+	var fsz := int(clamp(unit * 0.115, 30.0, 150.0))
+	draw_set_transform(Vector2(cx, cy - fsz * 0.2), -0.03, Vector2.ONE * _back(splash_t / 0.45))
+	_text("Seh's Workshop", Vector2(), fsz, CREAM, int(fsz * 0.1))
+	_reset_xf()
+	for i in range(3):
+		var hop := max(0.0, sin(t_now * 5.0 - i * 0.9)) * fsz * 0.12
+		_blockc(Vector2(cx + (i - 1) * fsz * 0.62 - fsz * 0.26, cy + fsz * 0.75 - hop), fsz * 0.52, COLORS[[1, 3, 5][i]], 1.0, _back((splash_t - 0.25 - i * 0.08) / 0.3))
+
+
 func _draw() -> void:
+	if state == "splash":
+		_draw_splash()
+		return
 	draw_rect(Rect2(Vector2(), vs), BG)
 	var off := fmod(t_now * 14.0, 180.0)
 	var k := -2
@@ -1167,7 +1225,7 @@ func _draw_main() -> void:
 		_text(names[id], Vector2(), 38, INK)
 		k += 1
 	_reset_xf()
-	_text("v1.12-playhop" if portal_name == "playhop" else "v1.12", Vector2(cx, vs.y - 34.0), 20, Color(CREAM.r, CREAM.g, CREAM.b, 0.45))
+	_text("v1.13-playhop" if portal_name == "playhop" else "v1.13", Vector2(cx, vs.y - 34.0), 20, Color(CREAM.r, CREAM.g, CREAM.b, 0.45))
 
 
 func _draw_sub_head(title: String) -> void:
@@ -1579,7 +1637,7 @@ func _tap(pos: Vector2, down: bool) -> void:
 
 func _selftest() -> void:
 	var m := int(OS.get_environment("BP_MODE"))
-	yield(get_tree().create_timer(1.2), "timeout")
+	yield(get_tree().create_timer(3.2), "timeout")
 	yield(_shot("menu.png"), "completed")
 	for scr in ["help", "settings", "modes"]:
 		var sr: Rect2 = rects[scr]
@@ -1673,6 +1731,7 @@ func _record() -> void:
 	bests = [640, 0, 0, 0]
 	classic_save = null
 	mode = 0
+	splash_t = 9.0
 	state = "play"
 	_new_game()
 	var seed_rows := {5: [0, 0, 3, 3, 0, 0, 0, 6], 6: [2, 2, 3, 0, 0, 5, 5, 6], 7: [2, 1, 1, 1, 0, 0, 5, 6]}

@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
 /* One screen: the game canvas fills the frame; the page only supplies the loading state. */
-:root { --bg: #1f4b43; --stripe: #235249; --cream: #f3ead5; --ink: #1c1a17; --gold: #f2b632; color-scheme: dark; }
+:root { --bg: #1f4b43; --stripe: #235249; --cream: #f3ead5; --ink: #1c1a17; --gold: #f2b632; --brown: #6b4226; color-scheme: dark; }
 html, body { height: 100%; }
 body { margin: 0; background: var(--bg); color: var(--cream); overflow: hidden; touch-action: none;
   font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
@@ -10,7 +10,7 @@ body { margin: 0; background: var(--bg); color: var(--cream); overflow: hidden; 
   -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
 #canvas { display: block; width: 100%; height: 100%; outline: none; background: var(--bg); }
 #status { position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 18px; background: var(--bg); padding: 0 max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px)); text-align: center; }
+  gap: 18px; background: var(--brown); padding: 0 max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px)); text-align: center; }
 #status h1 { font-size: 44px; font-weight: 900; letter-spacing: .02em; margin: 0; color: var(--cream); text-shadow: 0 4px 0 var(--ink); }
 #status h1 span { color: var(--gold); }
 #bar { width: min(280px, 70vw); height: 18px; border: 4px solid var(--ink); border-radius: 12px; background: var(--ink); overflow: hidden; }
@@ -20,7 +20,7 @@ body { margin: 0; background: var(--bg); color: var(--cream); overflow: hidden; 
 
 <canvas id="canvas" tabindex="0">This game needs a browser with WebGL.</canvas>
 <div id="status">
-  <h1>BLOCKY <span>PUZZLE</span></h1>
+  <h1>Seh's Workshop</h1>
   <div id="bar"><div id="fill"></div></div>
   <div id="note">Loading the game…</div>
 </div>
@@ -49,7 +49,7 @@ body { margin: 0; background: var(--bg); color: var(--cream); overflow: hidden; 
 (function () {
   var note = document.getElementById("note"), fill = document.getElementById("fill"), status = document.getElementById("status");
   function fail(msg) { note.textContent = msg; fill.style.background = "#e8503a"; }
-  var CONFIG = {"args":[],"canvasResizePolicy":2,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":629568,"index.wasm":19761972},"focusCanvas":true,"gdnativeLibs":[]};
+  var CONFIG = {"args":[],"canvasResizePolicy":2,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":1673840,"index.wasm":19761972},"focusCanvas":true,"gdnativeLibs":[]};
   if (typeof Engine === "undefined") { fail("The game engine script did not load."); return; }
   var gl = document.createElement("canvas").getContext("webgl") || document.createElement("canvas").getContext("experimental-webgl");
   if (!gl) { fail("This browser has WebGL turned off, so the game cannot draw."); return; }
