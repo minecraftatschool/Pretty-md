@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Blocky Puzzle</title>
+<title>Block Bonk</title>
 <!-- Yandex Games SDK (Playhop is served through Yandex Games). The path is relative to the host, as their docs require for uploaded archives. -->
 <script src="/sdk.js"></script>
 <style>
@@ -112,7 +112,7 @@ body { background: #1f4b43; color: #f3ead5; overflow: hidden; touch-action: none
   }
 
   function fail(msg) { note.textContent = msg; fill.style.background = "#e8503a"; }
-  var CONFIG = {"args":[],"canvasResizePolicy":2,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":1673840,"index.wasm":19761972},"focusCanvas":true,"gdnativeLibs":[]};
+  var CONFIG = {"args":[],"canvasResizePolicy":2,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":1674096,"index.wasm":19761972},"focusCanvas":true,"gdnativeLibs":[]};
   if (typeof Engine === "undefined") { fail("The game engine script did not load."); return; }
   var probe = document.createElement("canvas");
   if (!(probe.getContext("webgl") || probe.getContext("experimental-webgl"))) { fail("WebGL is turned off in this browser, so the game cannot draw."); return; }

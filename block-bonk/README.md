@@ -1,4 +1,4 @@
-# Blocky Puzzle
+# Block Bonk
 
 A block puzzle game made with Godot 3.6 (GDScript). One codebase runs on Android 4.4+,
 Wear OS style small/round screens, and the web.
@@ -18,16 +18,16 @@ Wear OS style small/round screens, and the web.
 | `game/audio/` | Rendered music (`music.ogg`) and sound effects (`*.wav`). |
 | `game/tools/gen_audio.py` | Regenerates the audio (needs Python 3 with NumPy; `ffmpeg` for the OGG). |
 | `web/crazygames/index.html` | HTML shell for the CrazyGames build (SDK v3 events, no ads). |
-| `web/playhop/index.html` | HTML shell for the Playhop build (v1.13-playhop): Yandex Games SDK, player-data saves, pause and mute handling. |
-| `scratch/` | The Scratch 3 edition (v1.13-scratch): the `.sb3` project and `gen_sb3.py`, the script that builds it. |
-| `web/artifact/blocky-puzzle.html` | HTML shell used for the claude.ai artifact (engine split into two files). |
+| `web/playhop/index.html` | HTML shell for the Playhop build (v1.14-playhop): Yandex Games SDK, player-data saves, pause and mute handling. |
+| `scratch/` | The Scratch 3 edition (v1.14-scratch): the `.sb3` project and `gen_sb3.py`, the script that builds it. |
+| `web/artifact/block-bonk.html` | HTML shell used for the claude.ai artifact (engine split into two files). |
 
 ## Building
 
 Open `game/` in Godot 3.6 and use Project → Export, or from the command line:
 
 ```sh
-godot --path game --export Android BlockyPuzzle.apk
+godot --path game --export Android BlockBonk.apk
 godot --path game --export HTML5 build/index.html
 ```
 
@@ -41,13 +41,13 @@ godot --path game --export HTML5 build/index.html
 
 ## Scratch edition
 
-`scratch/BlockyPuzzle-v1.13-scratch.sb3` opens in Scratch 3 or TurboWarp. It is generated, not hand-built:
+`scratch/BlockBonk-v1.14-scratch.sb3` opens in Scratch 3 or TurboWarp. It is generated, not hand-built:
 
 ```sh
 pip install fonttools
 ffmpeg -i game/audio/music.ogg -ac 1 -ar 22050 -c:a pcm_s16le music.wav
 python3 game/tools/gen_music2.py theme2.wav && ffmpeg -i theme2.wav -ac 1 -ar 22050 -c:a pcm_s16le music2.wav
-python3 scratch/gen_sb3.py game/audio music.wav music2.wav game/font.ttf BlockyPuzzle-v1.13-scratch.sb3
+python3 scratch/gen_sb3.py game/audio music.wav music2.wav game/font.ttf BlockBonk-v1.14-scratch.sb3
 ```
 
 One hidden sprite draws everything with pen stamps; text is the game's own typeface converted to outlines.

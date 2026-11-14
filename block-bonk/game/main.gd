@@ -1177,12 +1177,17 @@ func _draw_title(ty: float) -> void:
 	if compact:
 		var ts := int(dia * 0.075)
 		draw_set_transform(Vector2(cx, ty), wob, Vector2.ONE * pop)
-		_text("BLOCKY PUZZLE", Vector2(), ts, CREAM, int(ts * 0.09))
+		_text("BLOCK BONK", Vector2(), ts, CREAM, int(ts * 0.09))
 	else:
 		draw_set_transform(Vector2(cx, ty - 60.0), -0.04 + wob, Vector2.ONE * pop)
-		_text("BLOCKY", Vector2(), 128, CREAM, 10)
-		draw_set_transform(Vector2(cx, ty + 66.0), 0.03 - wob, Vector2.ONE * _back((menu_t - 0.08) / 0.4))
-		_text("PUZZLE", Vector2(), 128, GOLD, 10)
+		_text("BLOCK", Vector2(), 136, CREAM, 10)
+		# "BONK" drops in big and lands with a squash
+		var bk := clamp((menu_t - 0.18) / 0.22, 0.0, 1.0)
+		var land := clamp((menu_t - 0.4) / 0.25, 0.0, 1.0)
+		var squash := sin(land * PI) * 0.16 if menu_t > 0.4 else 0.0
+		if bk > 0.0:
+			draw_set_transform(Vector2(cx, ty + 70.0 - (1.0 - bk) * (1.0 - bk) * 260.0 + squash * 30.0), 0.03 - wob, Vector2(1.0 + squash, 1.0 - squash) * (1.0 + (1.0 - bk) * 0.5))
+			_text("BONK", Vector2(), 150, GOLD, 11)
 		draw_set_transform(Vector2(cx - 292.0, ty - 138.0 + sin(t_now * 2.0) * 10.0), -0.35 + wob * 3.0, Vector2.ONE * pop)
 		_piece(Vector2(), pieces[26 % pieces.size()], 30.0, 1.0)
 		draw_set_transform(Vector2(cx + 296.0, ty + 140.0 + cos(t_now * 1.7) * 10.0), 0.3 - wob * 3.0, Vector2.ONE * pop)
@@ -1225,7 +1230,7 @@ func _draw_main() -> void:
 		_text(names[id], Vector2(), 38, INK)
 		k += 1
 	_reset_xf()
-	_text("v1.13-playhop" if portal_name == "playhop" else "v1.13", Vector2(cx, vs.y - 34.0), 20, Color(CREAM.r, CREAM.g, CREAM.b, 0.45))
+	_text("v1.14-playhop" if portal_name == "playhop" else "v1.14", Vector2(cx, vs.y - 34.0), 20, Color(CREAM.r, CREAM.g, CREAM.b, 0.45))
 
 
 func _draw_sub_head(title: String) -> void:
