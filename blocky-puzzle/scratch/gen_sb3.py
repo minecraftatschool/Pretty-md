@@ -344,7 +344,7 @@ BTN = {1: (0, 4, 82, 24, "main"), 2: (0, -57, 68, 17, "main"), 3: (0, -96, 68, 1
        13: (-206, -119, 17, 17, "play"), 14: (-170, -119, 17, 17, "play"),
        15: (0, -51, 78, 20, "over"), 16: (0, -103, 50, 15, "over")}
 LISTS.update({
-    "grid": [0] * 64, "sim": [0] * 64, "placeT": [1] * 64, "fxT": [9] * 64, "fxC": [0] * 64,
+    "grid": [0] * 64, "sim": [0] * 64, "will": [0] * 64, "placeT": [1] * 64, "fxT": [9] * 64, "fxC": [0] * 64,
     "tray": [0, 0, 0], "trayT": [1, 1, 1], "bests": [0, 0, 0, 0], "rowsFull": [], "colsFull": [],
     "pw": pw, "ph": ph, "pcol": pcol, "pstart": pstart, "pcount": pcount, "pdx": pdx, "pdy": pdy, "bag": bag,
     "dch": GCH, "dw": [round(adv(c), 4) for c in GCH],
@@ -365,7 +365,7 @@ SIG.update({
     "sim fits": ["p", "c", "r"], "sim lines": ["p", "c", "r"], "sim place": ["p", "c", "r"], "deal": [],
     "coach calc": [], "new game": [], "check lines": [], "drop stones": [], "end game": ["why"], "place": ["slot", "c", "r"],
     "spawn": ["x", "y", "vx", "vy", "life", "s", "cos", "g"], "confetti": ["n"], "popup": ["x", "y", "s", "big"],
-    "go": ["screen"], "start mode": ["m"], "act": ["id"], "hit": [], "tick": [], "anim": [],
+    "will calc": [], "go": ["screen"], "start mode": ["m"], "act": ["id"], "hit": [], "tick": [], "anim": [],
     "draw head": ["cos"], "draw main": [], "draw modes": [], "draw help": [], "draw settings": [],
     "draw hud": [], "draw board": [], "draw fx": [], "draw coach": [], "draw over": [], "draw": [],
 })
@@ -567,7 +567,7 @@ define("new game", [
     setv("i", 1), repeat(NPOP, [replace("popT", v("i"), 9), chg("i", 1)]),
     delall("beamRow"), delall("beamI"), delall("beamT"),
     setv("score", 0), setv("shown", 0), setv("combo", 0), setv("dry", 0), setv("timeLeft", 120), setv("movesLeft", 30), setv("rubbleIn", 4),
-    setv("dragSlot", 0), setv("dragC", -1), setv("retSlot", 0), setv("newBest", 0), setv("over", 0), setv("overT", 0), setv("introT", 0),
+    setv("dragSlot", 0), setv("dragC", -1), setv("retSlot", 0), setv("willOn", 0), setv("willKey", -1), setv("newBest", 0), setv("over", 0), setv("overT", 0), setv("introT", 0),
     setv("toastT", 0), setv("shake", 0), setv("bump", 0), setv("pulse", 0), setv("armed", ""), setv("lastTick", 0),
     setv("state", "play"),
     call("deal"), call("coach calc"), call("sfx", "start", 0),
@@ -618,7 +618,7 @@ define("drop stones", [
 ])
 define("end game", [
     if_(eq(v("over"), 0), [
-        setv("over", 1), setv("overT", 0), setv("overWhy", arg("why")), setv("dragSlot", 0), setv("retSlot", 0), setv("armed", ""), setv("toastT", 0),
+        setv("over", 1), setv("overT", 0), setv("overWhy", arg("why")), setv("dragSlot", 0), setv("willOn", 0), setv("retSlot", 0), setv("armed", ""), setv("toastT", 0),
         ifelse(and_(eq(v("newBest"), 1), gt(v("score"), 0)), [call("sfx", "best", 0), call("confetti", 40)], [call("sfx", "over", 0)])]),
 ])
 define("place", [
@@ -663,8 +663,28 @@ define("place", [
     if_(eq(v("canMove"), 0), [call("end game", "o-noroom")]),
     if_(lt(v("tut"), 2), [call("coach calc")]),
 ])
+define("will calc", [                                      # marks the cells of every line the carried piece would complete
+    setv("wi", 1), repeat(64, [replace("will", v("wi"), 0), chg("wi", 1)]),
+    setv("willOn", 0), setv("wp", item("tray", v("dragSlot"))),
+    setv("wk", item("pstart", v("wp"))),
+    repeat(item("pcount", v("wp")), [replace("grid", gidx(add(v("dragC"), item("pdx", v("wk"))), add(v("dragR"), item("pdy", v("wk")))), 9), chg("wk", 1)]),
+    setv("wi", v("dragR")),
+    repeat(item("ph", v("wp")), [
+        setv("full", 1), setv("wj", 0),
+        repeat(8, [if_(eq(item("grid", gidx(v("wj"), v("wi"))), 0), [setv("full", 0)]), chg("wj", 1)]),
+        if_(eq(v("full"), 1), [setv("willOn", 1), setv("wj", 0), repeat(8, [replace("will", gidx(v("wj"), v("wi")), 1), chg("wj", 1)])]),
+        chg("wi", 1)]),
+    setv("wi", v("dragC")),
+    repeat(item("pw", v("wp")), [
+        setv("full", 1), setv("wj", 0),
+        repeat(8, [if_(eq(item("grid", gidx(v("wi"), v("wj"))), 0), [setv("full", 0)]), chg("wj", 1)]),
+        if_(eq(v("full"), 1), [setv("willOn", 1), setv("wj", 0), repeat(8, [replace("will", gidx(v("wi"), v("wj")), 1), chg("wj", 1)])]),
+        chg("wi", 1)]),
+    setv("wk", item("pstart", v("wp"))),
+    repeat(item("pcount", v("wp")), [replace("grid", gidx(add(v("dragC"), item("pdx", v("wk"))), add(v("dragR"), item("pdy", v("wk")))), 0), chg("wk", 1)]),
+])
 # ---------------------------------------------------------------- screens and input
-define("go", [setv("state", arg("screen")), setv("menuT", 0), setv("armed", ""), setv("pressId", 0), setv("dragSlot", 0)])
+define("go", [setv("willOn", 0), setv("state", arg("screen")), setv("menuT", 0), setv("armed", ""), setv("pressId", 0), setv("dragSlot", 0)])
 define("start mode", [setv("mode", arg("m")), setv("lastMode", arg("m")), call("new game")])
 define("act", [
     call("sfx", "click", 0),
@@ -741,7 +761,7 @@ define("tick", [
             setv("slot", add(1, floor(div(sub(BY, v("my")), SLOTH)))),
             if_(lt(v("slot"), 1), [setv("slot", 1)]), if_(gt(v("slot"), 3), [setv("slot", 3)]),
             if_(and_(gt(item("tray", v("slot")), 0), gt(item("trayT", v("slot")), 0)), [
-                setv("dragSlot", v("slot")), setv("dragC", -1), setv("retSlot", 0),
+                setv("dragSlot", v("slot")), setv("dragC", -1), setv("retSlot", 0), setv("willOn", 0), setv("willKey", -1),
                 setv("dragX", TX), setv("dragY", sub(BY - SLOTH / 2, mul(sub(v("slot"), 1), SLOTH))), setv("dragS", TC),
                 call("sfx", "pick", 0)])])]),
     if_(and_(gt(v("dragSlot"), 0), eq(v("scr"), "play")), [            # carrying a piece: it floats a little above the pointer
@@ -749,7 +769,10 @@ define("tick", [
         setv("c0", rnd(div(sub(sub(v("mx"), mul(item("pw", v("p")), CS / 2)), BX), CS))),
         setv("r0", rnd(div(sub(BY, add(v("my"), 22, mul(item("ph", v("p")), CS / 2))), CS))),
         call("fits", v("p"), v("c0"), v("r0")),
-        ifelse(eq(v("fit"), 1), [setv("dragC", v("c0")), setv("dragR", v("r0"))], [setv("dragC", -1)]),
+        ifelse(eq(v("fit"), 1), [
+            setv("dragC", v("c0")), setv("dragR", v("r0")),
+            if_(not_(eq(add(mul(v("c0"), 10), v("r0")), v("willKey"))), [setv("willKey", add(mul(v("c0"), 10), v("r0"))), call("will calc")]),
+        ], [setv("dragC", -1), setv("willOn", 0), setv("willKey", -1)]),
         chg("dragX", mul(sub(v("mx"), v("dragX")), 0.6)), chg("dragY", mul(sub(add(v("my"), 22), v("dragY")), 0.6)), chg("dragS", mul(sub(CS, v("dragS")), 0.5))]),
     if_(and_(eq(v("down"), 0), eq(v("wasDown"), 1)), [                 # released
         ifelse(gt(v("pressId"), 0), [
@@ -757,7 +780,7 @@ define("tick", [
             if_(eq(v("hitId"), v("n")), [call("act", v("n"))]),
         ], [
             if_(gt(v("dragSlot"), 0), [
-                setv("slot", v("dragSlot")), setv("dragSlot", 0),
+                setv("slot", v("dragSlot")), setv("dragSlot", 0), setv("willOn", 0), setv("willKey", -1),
                 ifelse(gt(v("dragC"), -1), [call("place", v("slot"), v("dragC"), v("dragR"))],
                        [setv("retSlot", v("slot")), setv("retT", 0), setv("retX", v("dragX")), setv("retY", v("dragY")), setv("retS", v("dragS")), call("sfx", "back", 0)])])])]),
     setv("wasDown", v("down")),
@@ -858,11 +881,15 @@ define("draw board", [
             if_(gt(v("eb"), 0.02), [stp("cell", add(cellx(mod(sub(v("di"), 1), 8)), v("ox")), add(celly(floor(div(sub(v("di"), 1), 8))), v("oy")), mul(100, v("eb")))]),
             chg("di", 1)]),
     ], [stp("board", v("ox"), v("oy"))]),
-    # which cells would the carried piece fill, and which lines would that complete
+    setv("glow", add(0.5, mul(0.5, sin(mul(v("tNow"), 687))))),
     setv("di", 1),
     repeat(64, [
         setv("bx", add(cellx(mod(sub(v("di"), 1), 8)), v("ox"))), setv("by", add(celly(floor(div(sub(v("di"), 1), 8))), v("oy"))),
         setv("n", item("grid", v("di"))),
+        if_(and_(eq(v("willOn"), 1), eq(item("will", v("di")), 1), gt(v("dragSlot"), 0)), [     # this line is about to clear: gold pulsing to white
+            setv("n", 0),
+            stp("t3", v("bx"), v("by"), add(100, mul(4, v("glow")))),
+            ghost(mul(60, sub(1, v("glow")))), stp("t9", v("bx"), v("by"), add(100, mul(4, v("glow")))), clearfx()]),
         if_(gt(v("n"), 0), [
             setv("k", item("placeT", v("di"))),
             ifelse(lt(v("k"), 0), [
@@ -879,7 +906,7 @@ define("draw board", [
         if_(lt(v("k"), 0.32), [
             ifelse(lt(v("k"), 0), [stp(join("t", item("fxC", v("di"))), v("bx"), v("by"))], [
                 setv("k", div(v("k"), 0.32)),
-                ghost(mul(100, v("k"), v("k"))),
+                ghost(mul(100, v("k"), v("k"), v("k"))),
                 stp("t9", v("bx"), v("by"), mul(100, add(1, mul(0.35, sin(mul(v("k"), 180)))), sub(1, mul(v("k"), v("k"))))),
                 clearfx()])]),
         chg("di", 1)]),
@@ -888,7 +915,8 @@ define("draw board", [
         ghost(add(50, mul(10, sin(mul(v("tNow"), 687))))),
         setv("dpk", item("pstart", v("p"))),
         repeat(item("pcount", v("p")), [
-            stp(join("t", item("pcol", v("p"))), add(cellx(add(v("dragC"), item("pdx", v("dpk")))), v("ox")), add(celly(add(v("dragR"), item("pdy", v("dpk")))), v("oy")), 94),
+            if_(not_(and_(eq(v("willOn"), 1), eq(item("will", gidx(add(v("dragC"), item("pdx", v("dpk"))), add(v("dragR"), item("pdy", v("dpk"))))), 1))), [
+                stp(join("t", item("pcol", v("p"))), add(cellx(add(v("dragC"), item("pdx", v("dpk")))), v("ox")), add(celly(add(v("dragR"), item("pdy", v("dpk")))), v("oy")), 94)]),
             chg("dpk", 1)]),
         clearfx()]),
 ])
