@@ -1167,7 +1167,7 @@ func _draw_main() -> void:
 		_text(names[id], Vector2(), 38, INK)
 		k += 1
 	_reset_xf()
-	_text("v1.9-playhop" if portal_name == "playhop" else "v1.12", Vector2(cx, vs.y - 34.0), 20, Color(CREAM.r, CREAM.g, CREAM.b, 0.45))
+	_text("v1.12-playhop" if portal_name == "playhop" else "v1.12", Vector2(cx, vs.y - 34.0), 20, Color(CREAM.r, CREAM.g, CREAM.b, 0.45))
 
 
 func _draw_sub_head(title: String) -> void:
